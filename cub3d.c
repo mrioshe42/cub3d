@@ -466,7 +466,7 @@ int		main(int argc, char **argv)
 	    		play_sound_alt(vars.sounds.ambient, true, true);
 		duplicate_player(data);
 		get_player_pos(data);	
-		check_walls(data);
+		check_map_walls(data);
 		check_valid_path(data, data->player.i, data->player.j);    	
 		mlx_hook(vars.win, 2, 1L << 0, key_press, &vars);
 	    	mlx_hook(vars.win, 3, 1L << 1, key_lift, &vars);
