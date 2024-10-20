@@ -135,6 +135,282 @@ int		ft_cub(char *str, t_recup *recup)
 	return (0);
 }
 
+int	beflastline(char **map, int y)
+{
+	if (map[y + 1] != NULL && map[y + 2] != NULL)
+		return (1);
+	return (0);
+}
+
+size_t	line_length(char *line, char *pos)
+{
+	size_t	i;
+
+	i = 0;
+	while (line[i] && &line[i] != pos)
+	{
+		i++;
+	}
+	return (i + 1);
+}
+
+int	valid_cell_path(t_cub3d *game, int y, int x)
+{
+	char	pos;
+	size_t	length;
+
+	pos = game->player.direction;
+	length = line_length(game->tmp[y], &game->tmp[y][x]);
+	if (y > 0 && length > (ft_strlen(game->tmp[y - 1]) - 1))
+		return (1);
+	else if (game->tmp[y + 1] && length > (ft_strlen(game->tmp[y + 1]) 
+			- beflastline(game->tmp, y)))
+		return (1);
+	if (game->tmp[y][x] == ' ' || ((game->tmp[y][x] == '0' || game->tmp[y][x] 
+			== pos) && y == 0) 
+		|| ((game->tmp[y][x] == '0' || game->tmp[y][x] == 
+			pos) && game->tmp[y + 1] == NULL) 
+		|| ((game->tmp[y][x] == '0' || game->tmp[y][x] 
+			== pos) && x == 0) 
+		|| ((game->tmp[y][x] == '0' || game->tmp[y][x] 
+			== pos) && (game->tmp[y][x + 1] == '\n' 
+		|| game->tmp[y][x + 1] == '\0')))
+	{
+		return (1);
+	}
+	return (0);
+}
+
+void	check_valid_path(t_cub3d *game, int y, int x)
+{
+	if (game->tmp[y][x] == 'V' || game->tmp[y][x] == '1')
+		return ;
+	if (valid_cell_path(game, y, x))
+	{
+		printf("Map path isn't valid\n");
+		exit (1);
+	}
+	else if (game->tmp[y][x] == game->player.direction 
+		|| game->tmp[y][x] == '0')
+	{
+		game->tmp[y][x] = 'V';
+		check_valid_path(game, y, x + 1);
+		if (x > 0)
+			check_valid_path(game, y, x - 1);
+		if (game->tmp[y + 1] != NULL)
+			check_valid_path(game, y + 1, x);
+		if (y > 0)
+			check_valid_path(game, y - 1, x);
+	}
+}
+
+void	check_walls(t_cub3d *data)
+{
+	int	i;
+	int	j;
+
+	i = 0;
+	while (data->map[i])
+	{
+		j = 0;
+		while (data->map[i][j] && data->map[i][j] != '\n')
+		{
+			if (i == 0 || data->map[i + 1] == NULL)
+			{
+				if (data->map[i][j] != '1' && data->map[i][j] != ' ')
+					exit(1);
+			}
+			else if (j == 0 || data->map[i][j + 1] == '\n')
+			{
+				if (data->map[i][j] != '1' && data->map[i][j] != ' ')
+					exit(1);
+			}
+			j++;
+		}
+		i++;
+	}
+}
+
+int	empty_line(char *line)
+{
+	int	i;
+
+	i = 0;
+	while (line[i] && line[i] != '\n')
+	{
+		if (line[i] != ' ' && line[i] != '\t')
+			return (1);
+		i++;
+	}
+	return (0);
+}
+
+int	check_which_texture(t_cub3d *data, int i, char *direction)
+{
+	if (ft_strnstr(data->file_content[i], 
+			direction, ft_strlen(data->file_content[i])))
+	{
+		valid_texture_line(data->file_content[i], direction);
+		return (1);
+	}
+	return (0);
+}
+char	*remove_newline(char *str)
+{
+	int		i;
+	int		j;
+	char	*trimmed;
+
+	i = 0;
+	j = 0;
+	while (str[i] && str[i] != '\n')
+		i++;
+	trimmed = malloc((sizeof(char) * i) + 1);
+	while (str[j] && str[j] != '\n')
+	{
+		trimmed[j] = str[j];
+		j++;
+	}
+	trimmed[j] = '\0';
+	return (trimmed);
+}
+
+void	store_texture(t_cub3d *data, int i)
+{
+	if (check_which_texture(data, i, "NO"))
+	{
+		data->paths.no_path = remove_newline(ft_strnstr(data->file_content[i],
+					"textures", ft_strlen(data->file_content[i])));
+	}
+	else if (check_which_texture(data, i, "SO"))
+	{
+		data->paths.so_path = remove_newline(ft_strnstr(data->file_content[i],
+					"textures", ft_strlen(data->file_content[i])));
+	}
+	else if (check_which_texture(data, i, "EA"))
+	{
+		data->paths.ea_path = remove_newline(ft_strnstr(data->file_content[i],
+					"textures", ft_strlen(data->file_content[i])));
+	}
+	else if (check_which_texture(data, i, "WE"))
+	{
+		data->paths.we_path = remove_newline(ft_strnstr(data->file_content[i],
+					"textures", ft_strlen(data->file_content[i])));
+	}
+}
+int	store_textures_path(t_cub3d *data, int length)
+{
+	int	i;
+
+	i = 0;
+	while (data->file_content[i] != NULL && i < length)
+	{
+		store_texture(data, i);
+		i++;
+	}
+	if (check_path_rgb(data) == 0)
+		return (0);
+	exit(1);
+}
+
+void	check_map(t_cub3d *data)
+{
+	int	i;
+
+	i = 0;
+	while (data->map[i] != NULL)
+	{
+		if (is_map_line(data->map[i]) == 1 || !empty_line(data->map[i]))
+		{
+			printf("Error, Map can only be composed of 01NSWE.\n");
+			exit(1);
+		}
+		i++;
+	}
+}
+
+void	parse_file_content(t_cub3d *data)
+{
+	int	v;
+	int	i;
+
+	i = 0;
+	v = 0;
+	while (data->file_content[i] != NULL)
+	{
+		if (empty_line(data->file_content[i]))
+			v++;
+		if (v == 6)
+			break ;
+		i++;
+	}
+	if (store_textures_path(data, ++i) == 0)
+	{
+		store_map(data, i);
+		check_map(data);
+	}
+	else
+	{
+		printf("Error, Textures needed weren't provided.\n");
+		exit(1);
+	}
+}
+
+void	duplicate_player(t_cub3d *data)
+{
+	int	i;
+	int	j;
+	int	v;
+
+	i = 0;
+	v = 0;
+	while (data->map[i])
+	{
+		j = 0;
+		while (data->map[i][j])
+		{
+			if (data->map[i][j] == 'N' || data->map[i][j] == 'S'
+				|| data->map[i][j] == 'E' || data->map[i][j] == 'W')
+				v++;
+			j++;
+		}
+		i++;
+	}
+	if (v != 1)
+	{
+		printf("Please provide a player position in the map (NO DUPLICATES)\n");
+		exit(1);
+	}
+}
+
+void	get_player_pos(t_cub3d *data)
+{
+	int	i;
+	int	j;
+	int	v;
+
+	i = 0;
+	v = 0;
+	while (data->map[i])
+	{
+		j = 0;
+		while (data->map[i][j])
+		{
+			if (data->map[i][j] == 'N' || data->map[i][j] == 'S'
+				|| data->map[i][j] == 'E' || data->map[i][j] == 'W')
+			{
+				data->player.direction = data->map[i][j];
+				data->player.i = i;
+				data->player.j = j;
+				v++;
+				return ;
+			}
+			j++;
+		}
+		i++;
+	}
+}
+
 int		main(int argc, char **argv)
 {
 	t_game game;
@@ -144,10 +420,14 @@ int		main(int argc, char **argv)
 	if (argc == 2)
 	{
     	ft_cub(argv[1], &recup);
-      vars.win = mlx_new_window(vars.mlx, vars.resx, vars.resy, "Cub3D");
+        vars.win = mlx_new_window(vars.mlx, vars.resx, vars.resy, "Cub3D");
     	if (vars.sounds.ambient)
     		play_sound_alt(vars.sounds.ambient, true, true);
-    	mlx_hook(vars.win, 2, 1L << 0, key_press, &vars);
+	duplicate_player(data);
+	get_player_pos(data);	
+	check_walls(data);
+	check_valid_path(data, data->player.i, data->player.j);    	
+	mlx_hook(vars.win, 2, 1L << 0, key_press, &vars);
     	mlx_hook(vars.win, 3, 1L << 1, key_lift, &vars);
     	mlx_hook(vars.win, LINUX ? 33 : 17, 1L << 17, clean_and_exit_z, &vars);
     	mlx_loop(vars.mlx);	
