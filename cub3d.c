@@ -148,7 +148,7 @@ void parse_map_data(char *file_path, t_game *game)
         }
         if (x == 0)
             init_map_row(game, y, sizeof(buffer));
-        handle_character(game, buffer, x, y);
+        ft_is_map(game, buffer, x, y);
         game->map[y][x] = buffer;
         x++;
     }
