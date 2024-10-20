@@ -127,7 +127,7 @@ void init_map_row(t_game *game, int y, int len)
     memset(game->map[y], 0, len + 1);
 }
 
-void parse_map_data(char *file_path, t_game *game)
+void ft_parsing(char *file_path, t_game *game)
 {
     int fd;
     char buffer;
