@@ -90,6 +90,19 @@ void set_keystate(t_keybinds *keybinds, int key, bool pressed)
 		keybinds->sneak = pressed;
 }
 
+int			key_press(int keycode, t_game *game)
+{
+	set_keystate(&(game->player.keybinds), keycode, true);
+	if (keycode == ESC)
+		clean_and_exit(0, game);
+	return (0);
+}
+
+int			key_lift(int keycode, t_game *game)
+{
+	set_keystate(&(game->player.keybinds), keycode, false);
+	return (0);
+}
 int		ft_is_map(char *str, t_game *game)
 {
     int i;
@@ -450,6 +463,19 @@ void get_player_pos(t_game *game)
         }
         i++;
     }
+}
+
+void	play_sound_alt(uint32_t s, bool play, bool loop)
+{
+	if (!s)
+		return ;
+	if (loop)
+		BASS_ChannelFlags(s,
+			BASS_SAMPLE_LOOP, BASS_SAMPLE_LOOP);
+	if (play)
+		BASS_ChannelPlay(s, 0);
+	else
+		BASS_ChannelPause(s);
 }
 
 int		main(int argc, char **argv)
