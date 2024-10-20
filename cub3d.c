@@ -428,7 +428,7 @@ void	duplicate_player(t_game *game)
 	}
 }
 
-void get_player_position(t_game *game)
+void get_player_pos(t_game *game)
 {
     int i = 0;
     int j;
