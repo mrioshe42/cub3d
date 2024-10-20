@@ -140,20 +140,43 @@ void init_map_row(t_game *game, int y, int len)
     memset(game->map[y], 0, len + 1);
 }
 
+int	lines_in_file(char *path)
+{
+	int		fd;
+	char	*line;
+	int		lines;
+
+	fd = open(path, O_RDONLY);
+	lines = 0;
+	if (fd < 0)
+		return (0);
+	line = get_next_line(fd);
+	while (line)
+	{
+		lines++;
+		free(line);
+		line = get_next_line(fd);
+	}
+	close(fd);
+	return (lines);
+}
+
 void ft_parsing(char *file_path, t_game *game)
 {
     int fd;
     char buffer;
-    int x = 0, y = 0;
+    int x = 0, y = 0; i = 0;
 
     if ((fd = open(file_path, O_DIRECTORY)) != -1)
         ft_error(game, "Invalid: is a directory\n");
     if ((fd = open(file_path, O_RDONLY)) == -1)
         ft_error(game, "Invalid .cub file\n");
-
+    number_of_lines = lines_in_file(path);
+     data->file_content = ft_calloc(number_of_lines + 1, sizeof(char *));
     while (read(fd, &buffer, 1) > 0)
     {
-        if (buffer == '\n')
+     data->file_content[i] = buffer;
+	if (buffer == '\n')
         {
             x = 0;
             y++;
@@ -164,6 +187,7 @@ void ft_parsing(char *file_path, t_game *game)
         ft_is_map(game, buffer, x, y);
         game->map[y][x] = buffer;
         x++;
+	i++;
     }
     close(fd);
 
@@ -387,7 +411,7 @@ void	check_map(t_game *game)
 	}
 }
 
-void	parse_file_content(t_game *game)
+void	parse_file_content(t_game *game, char buff)
 {
 	int	v;
 	int	i;
