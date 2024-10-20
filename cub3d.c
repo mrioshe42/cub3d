@@ -24,6 +24,48 @@
 #  define MAKE_PORTAL 36
 #  define ESC 53
 
+typedef struct s_keybinds {
+    bool rotate_left;
+    bool rotate_right;
+    bool rotate_up;
+    bool rotate_down;
+    bool forwards;
+    bool backwards;
+    bool left;
+    bool right;
+    bool jump;
+    bool sneak;
+} t_keybinds;
+
+typedef struct s_map {
+    char **data;
+} t_map;
+
+typedef struct s_player {
+    char direction;
+    int i;
+    int j;
+} t_player;
+
+typedef struct s_paths {
+    char *no_path; // Path for north texture
+    char *so_path; // Path for south texture
+    char *ea_path; // Path for east texture
+    char *we_path; // Path for west texture
+} t_paths;
+
+typedef struct s_game {
+    void *mlx;              // Pointer to the graphics library
+    void *win;              // Pointer to the window
+    t_keybinds keybinds;   // Key bindings for the game
+    t_map *map;            // Game map
+    t_player player;       // Player information
+    t_paths paths;         // Texture paths
+    char **file_content;    // Lines from the configuration file
+    int wrongcharmap;      // Error code for invalid map characters
+    // Add other fields as needed, e.g., for textures, sounds, etc.
+} t_game;
+
 void set_keystate(t_keybinds *keybinds, int key, bool pressed)
 {
 	if (key == ROTATE_LEFT)
@@ -48,71 +90,75 @@ void set_keystate(t_keybinds *keybinds, int key, bool pressed)
 		keybinds->sneak = pressed;
 }
 
-int		ft_is_map(char *str, t_recup *recup)
+int		ft_is_map(char *str, t_game *game)
 {
-	int i;
+    int i;
 
-	i = 0;
-	if (!str)
-		return (0);
-	if (ft_charinstr(str, '1') == 1 || ft_charinstr(str, '0') == 1)
-	{
-		while (str[i] != '\0')
-		{
-			if (str[i] != ' ' && str[i] != '0' && str[i] != '1' \
-					&& str[i] != '2' && str[i] != 'N' && str[i] != 'S' \
-					&& str[i] != 'E' && str[i] != 'W' && str[i] != '\n'
-					&& str[i] != '\t')
-			{
-				if (recup->insidemap == 1)
-					recup->wrongcharmap = 2;
-				return (0);
-			}
-			i++;
-		}
-		return (1);
-	}
-	return (0);
+    i = 0;
+    if (!str)
+        return (0);
+    if (ft_charinstr(str, '1') == 1 || ft_charinstr(str, '0') == 1)
+    {
+        while (str[i] != '\0')
+        {
+            if (str[i] != ' ' && str[i] != '0' && str[i] != '1' \
+                    && str[i] != '2' && str[i] != 'N' && str[i] != 'S' \
+                    && str[i] != 'E' && str[i] != 'W' && str[i] != '\n'
+                    && str[i] != '\t')
+            {
+                game->wrongcharmap = 2; // Store error in the game structure
+                return (0);
+            }
+            i++;
+        }
+        return (1);
+    }
+    return (0);
 }
 
-void	init_map_row(t_game *game, int y, int len)
+void init_map_row(t_game *game, int y, int len)
 {
-	int	i;
-
-	i = 0;
-	game->map->data[y] = malloc(sizeof(char) * (len + 1));
-	ft_memset(game->map->data[y], 0, len + 1);
+    game->map[y] = malloc(sizeof(char) * (len + 1));
+    if (!game->map[y]) // Check for successful memory allocation
+    {
+        perror("Failed to allocate memory for map row");
+        exit(EXIT_FAILURE);
+    }
+    memset(game->map[y], 0, len + 1);
 }
-void	ft_parsing(char *fichier, t_recup *recup)
+
+void parse_map_data(char *file_path, t_game *game)
 {
-	int			fd;
-	char		*str;
+    int fd;
+    char buffer;
+    int x = 0, y = 0;
 
-	str = NULL;
-	if ((fd = open(fichier, O_DIRECTORY)) != -1)
-		ft_error(recup, "Invalide : is a directory\n");
-	if ((fd = open(fichier, O_RDONLY)) == -1)
-		ft_error(recup, "Fichier .cub invalide\n");
-	while (read(fd, &buffer, 1) > 0)
-	{
-		if (buffer == '\n')
-		{
-			x = 0;
-			y++;
-			continue ;
-		}
-		if (x == 0)
-			init_map_row(game, y, sizeof(buff));
-		handle_character(game, buffer, x, y);
-		game->map->data[y][x] = buffer;
-		x++;
-	}
-	close(fd);
-	if (recup->sizeline == 0 || recup->nblines == 0)
-		ft_error(recup, "Map absente\n");
-	ft_parsing_map(fichier, recup);
+    if ((fd = open(file_path, O_DIRECTORY)) != -1)
+        ft_error(game, "Invalid: is a directory\n");
+    if ((fd = open(file_path, O_RDONLY)) == -1)
+        ft_error(game, "Invalid .cub file\n");
+
+    while (read(fd, &buffer, 1) > 0)
+    {
+        if (buffer == '\n')
+        {
+            x = 0;
+            y++;
+            continue;
+        }
+        if (x == 0)
+            init_map_row(game, y, sizeof(buffer));
+        handle_character(game, buffer, x, y);
+        game->map[y][x] = buffer;
+        x++;
+    }
+    close(fd);
+
+    if (game->map[0] == 0)
+        ft_error(game, "Map missing\n");
 }
-int		ft_cub(char *str, t_recup *recup)
+
+int		ft_cub(char *str, t_game *game)
 {
 	int			i;
 
@@ -124,14 +170,14 @@ int		ft_cub(char *str, t_recup *recup)
 		i--;
 		if (i == 0)
 		{
-			ft_error(recup, "Nom de la map invalide\n");
+			ft_error(game, "Nom de la map invalide\n");
 			return (0);
 		}
 	}
 	if (str[i + 1] == 'c' && str[i + 2] == 'u' && str[i + 3] == 'b')
-		ft_parsing(str, recup);
+		ft_parsing(str, game);
 	else
-		ft_error(recup, "Nom de la map invalide\n");
+		ft_error(game, "Nom de la map invalide\n");
 	return (0);
 }
 
@@ -154,7 +200,7 @@ size_t	line_length(char *line, char *pos)
 	return (i + 1);
 }
 
-int	valid_cell_path(t_cub3d *game, int y, int x)
+int	valid_cell_path(t_game *game, int y, int x)
 {
 	char	pos;
 	size_t	length;
@@ -181,54 +227,53 @@ int	valid_cell_path(t_cub3d *game, int y, int x)
 	return (0);
 }
 
-void	check_valid_path(t_cub3d *game, int y, int x)
+void check_valid_path(t_game *game, int y, int x)
 {
-	if (game->tmp[y][x] == 'V' || game->tmp[y][x] == '1')
-		return ;
-	if (valid_cell_path(game, y, x))
-	{
-		printf("Map path isn't valid\n");
-		exit (1);
-	}
-	else if (game->tmp[y][x] == game->player.direction 
-		|| game->tmp[y][x] == '0')
-	{
-		game->tmp[y][x] = 'V';
-		check_valid_path(game, y, x + 1);
-		if (x > 0)
-			check_valid_path(game, y, x - 1);
-		if (game->tmp[y + 1] != NULL)
-			check_valid_path(game, y + 1, x);
-		if (y > 0)
-			check_valid_path(game, y - 1, x);
-	}
+    if (game->map[y][x] == 'V' || game->map[y][x] == '1')
+        return;
+
+    if (valid_cell_path(game, y, x))
+    {
+        printf("Map path isn't valid\n");
+        exit(1);
+    }
+    else if (game->map[y][x] == game->player.direction || game->map[y][x] == '0')
+    {
+        game->map[y][x] = 'V';
+        check_valid_path(game, y, x + 1);
+        if (x > 0)
+            check_valid_path(game, y, x - 1);
+        if (game->map[y + 1] != NULL)
+            check_valid_path(game, y + 1, x);
+        if (y > 0)
+            check_valid_path(game, y - 1, x);
+    }
 }
 
-void	check_walls(t_cub3d *data)
+void check_map_walls(t_game *game)
 {
-	int	i;
-	int	j;
+    int i = 0;
+    int j;
 
-	i = 0;
-	while (data->map[i])
-	{
-		j = 0;
-		while (data->map[i][j] && data->map[i][j] != '\n')
-		{
-			if (i == 0 || data->map[i + 1] == NULL)
-			{
-				if (data->map[i][j] != '1' && data->map[i][j] != ' ')
-					exit(1);
-			}
-			else if (j == 0 || data->map[i][j + 1] == '\n')
-			{
-				if (data->map[i][j] != '1' && data->map[i][j] != ' ')
-					exit(1);
-			}
-			j++;
-		}
-		i++;
-	}
+    while (game->map[i])
+    {
+        j = 0;
+        while (game->map[i][j] && game->map[i][j] != '\n')
+        {
+            if (i == 0 || game->map[i + 1] == NULL)
+            {
+                if (game->map[i][j] != '1' && game->map[i][j] != ' ')
+                    exit(1);
+            }
+            else if (j == 0 || game->map[i][j + 1] == '\n')
+            {
+                if (game->map[i][j] != '1' && game->map[i][j] != ' ')
+                    exit(1);
+            }
+            j++;
+        }
+        i++;
+    }
 }
 
 int	empty_line(char *line)
@@ -245,12 +290,12 @@ int	empty_line(char *line)
 	return (0);
 }
 
-int	check_which_texture(t_cub3d *data, int i, char *direction)
+int	check_which_texture(t_game *game, int i, char *direction)
 {
-	if (ft_strnstr(data->file_content[i], 
-			direction, ft_strlen(data->file_content[i])))
+	if (ft_strnstr(game->file_content[i], 
+			direction, ft_strlen(game->file_content[i])))
 	{
-		valid_texture_line(data->file_content[i], direction);
+		valid_texture_line(game->file_content[i], direction);
 		return (1);
 	}
 	return (0);
@@ -275,52 +320,52 @@ char	*remove_newline(char *str)
 	return (trimmed);
 }
 
-void	store_texture(t_cub3d *data, int i)
+void	store_texture(t_game *game, int i)
 {
-	if (check_which_texture(data, i, "NO"))
+	if (check_which_texture(game, i, "NO"))
 	{
-		data->paths.no_path = remove_newline(ft_strnstr(data->file_content[i],
-					"textures", ft_strlen(data->file_content[i])));
+		game->paths.no_path = remove_newline(ft_strnstr(game->file_content[i],
+					"textures", ft_strlen(game->file_content[i])));
 	}
-	else if (check_which_texture(data, i, "SO"))
+	else if (check_which_texture(game, i, "SO"))
 	{
-		data->paths.so_path = remove_newline(ft_strnstr(data->file_content[i],
-					"textures", ft_strlen(data->file_content[i])));
+		game->paths.so_path = remove_newline(ft_strnstr(game->file_content[i],
+					"textures", ft_strlen(game->file_content[i])));
 	}
-	else if (check_which_texture(data, i, "EA"))
+	else if (check_which_texture(game, i, "EA"))
 	{
-		data->paths.ea_path = remove_newline(ft_strnstr(data->file_content[i],
-					"textures", ft_strlen(data->file_content[i])));
+		game->paths.ea_path = remove_newline(ft_strnstr(game->file_content[i],
+					"textures", ft_strlen(game->file_content[i])));
 	}
-	else if (check_which_texture(data, i, "WE"))
+	else if (check_which_texture(game, i, "WE"))
 	{
-		data->paths.we_path = remove_newline(ft_strnstr(data->file_content[i],
-					"textures", ft_strlen(data->file_content[i])));
+		game->paths.we_path = remove_newline(ft_strnstr(game->file_content[i],
+					"textures", ft_strlen(game->file_content[i])));
 	}
 }
-int	store_textures_path(t_cub3d *data, int length)
+int	store_textures_path(t_game *game, int length)
 {
 	int	i;
 
 	i = 0;
-	while (data->file_content[i] != NULL && i < length)
+	while (game->file_content[i] != NULL && i < length)
 	{
-		store_texture(data, i);
+		store_texture(game, i);
 		i++;
 	}
-	if (check_path_rgb(data) == 0)
+	if (check_path_rgb(game) == 0)
 		return (0);
 	exit(1);
 }
 
-void	check_map(t_cub3d *data)
+void	check_map(t_game *game)
 {
 	int	i;
 
 	i = 0;
-	while (data->map[i] != NULL)
+	while (game->map[i] != NULL)
 	{
-		if (is_map_line(data->map[i]) == 1 || !empty_line(data->map[i]))
+		if (is_map_line(game->map[i]) == 1 || !empty_line(game->map[i]))
 		{
 			printf("Error, Map can only be composed of 01NSWE.\n");
 			exit(1);
@@ -329,25 +374,25 @@ void	check_map(t_cub3d *data)
 	}
 }
 
-void	parse_file_content(t_cub3d *data)
+void	parse_file_content(t_game *game)
 {
 	int	v;
 	int	i;
 
 	i = 0;
 	v = 0;
-	while (data->file_content[i] != NULL)
+	while (game->file_content[i] != NULL)
 	{
-		if (empty_line(data->file_content[i]))
+		if (empty_line(game->file_content[i]))
 			v++;
 		if (v == 6)
 			break ;
 		i++;
 	}
-	if (store_textures_path(data, ++i) == 0)
+	if (store_textures_path(game, ++i) == 0)
 	{
-		store_map(data, i);
-		check_map(data);
+		store_map(game, i);
+		check_map(game);
 	}
 	else
 	{
@@ -356,7 +401,7 @@ void	parse_file_content(t_cub3d *data)
 	}
 }
 
-void	duplicate_player(t_cub3d *data)
+void	duplicate_player(t_game *game)
 {
 	int	i;
 	int	j;
@@ -364,13 +409,13 @@ void	duplicate_player(t_cub3d *data)
 
 	i = 0;
 	v = 0;
-	while (data->map[i])
+	while (game->map[i])
 	{
 		j = 0;
-		while (data->map[i][j])
+		while (game->map[i][j])
 		{
-			if (data->map[i][j] == 'N' || data->map[i][j] == 'S'
-				|| data->map[i][j] == 'E' || data->map[i][j] == 'W')
+			if (game->map[i][j] == 'N' || game->map[i][j] == 'S'
+				|| game->map[i][j] == 'E' || game->map[i][j] == 'W')
 				v++;
 			j++;
 		}
@@ -383,32 +428,28 @@ void	duplicate_player(t_cub3d *data)
 	}
 }
 
-void	get_player_pos(t_cub3d *data)
+void get_player_position(t_game *game)
 {
-	int	i;
-	int	j;
-	int	v;
+    int i = 0;
+    int j;
 
-	i = 0;
-	v = 0;
-	while (data->map[i])
-	{
-		j = 0;
-		while (data->map[i][j])
-		{
-			if (data->map[i][j] == 'N' || data->map[i][j] == 'S'
-				|| data->map[i][j] == 'E' || data->map[i][j] == 'W')
-			{
-				data->player.direction = data->map[i][j];
-				data->player.i = i;
-				data->player.j = j;
-				v++;
-				return ;
-			}
-			j++;
-		}
-		i++;
-	}
+    while (game->map[i])
+    {
+        j = 0;
+        while (game->map[i][j])
+        {
+            if (game->map[i][j] == 'N' || game->map[i][j] == 'S' || 
+                game->map[i][j] == 'E' || game->map[i][j] == 'W')
+            {
+                game->player.direction = game->map[i][j];
+                game->player.i = i;
+                game->player.j = j;
+                return;
+            }
+            j++;
+        }
+        i++;
+    }
 }
 
 int		main(int argc, char **argv)
@@ -419,20 +460,20 @@ int		main(int argc, char **argv)
 	ft_initialisation(&recup);
 	if (argc == 2)
 	{
-    	ft_cub(argv[1], &recup);
-        vars.win = mlx_new_window(vars.mlx, vars.resx, vars.resy, "Cub3D");
-    	if (vars.sounds.ambient)
-    		play_sound_alt(vars.sounds.ambient, true, true);
-	duplicate_player(data);
-	get_player_pos(data);	
-	check_walls(data);
-	check_valid_path(data, data->player.i, data->player.j);    	
-	mlx_hook(vars.win, 2, 1L << 0, key_press, &vars);
-    	mlx_hook(vars.win, 3, 1L << 1, key_lift, &vars);
-    	mlx_hook(vars.win, LINUX ? 33 : 17, 1L << 17, clean_and_exit_z, &vars);
-    	mlx_loop(vars.mlx);	
-  }
+	    	ft_cub(argv[1], &recup);
+	        vars.win = mlx_new_window(vars.mlx, vars.resx, vars.resy, "Cub3D");
+	    	if (vars.sounds.ambient)
+	    		play_sound_alt(vars.sounds.ambient, true, true);
+		duplicate_player(data);
+		get_player_pos(data);	
+		check_walls(data);
+		check_valid_path(data, data->player.i, data->player.j);    	
+		mlx_hook(vars.win, 2, 1L << 0, key_press, &vars);
+	    	mlx_hook(vars.win, 3, 1L << 1, key_lift, &vars);
+	    	mlx_hook(vars.win, LINUX ? 33 : 17, 1L << 17, clean_and_exit_z, &vars);
+	    	mlx_loop(vars.mlx);	
+  	}
 	else
-		write(1, "Error\nArguments invalides\n", 30);
+		write(1, "Error\nArguments\n", 16);
   return (0);
 }
