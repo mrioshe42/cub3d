@@ -95,3 +95,51 @@ void draw_spiral_minimap(t_env env, int max_elements) {
     draw_square(env, center_x, center_y, COLOR_MAP_PLAYER);
 }
 
+#define DOOR_CLOSED '8'
+#define DOOR_LOCKED '9'
+#define DOOR_OPEN '7'
+#define TILE_SIZE 32
+#define STEP_SIZE 16
+
+void play_door_sound(t_game *game)
+{
+	if (game->sounds->sound)
+		system("afplay music/wind.mp3 &");
+}
+
+bool is_door(char tile)
+{
+	return tile == DOOR_CLOSED || tile == DOOR_LOCKED || tile == DOOR_OPEN;
+}
+
+void toggle_door(t_game *game, int x, int y)
+{
+	char *tile = &game->map->big_map[y][x];
+
+	if (*tile == DOOR_CLOSED || *tile == DOOR_LOCKED)
+	{
+		*tile = DOOR_OPEN;
+		play_door_sound(game);
+	}
+	else if (*tile == DOOR_OPEN)
+	{
+		*tile = DOOR_CLOSED;
+		play_door_sound(game);
+	}
+}
+
+void open_door(t_game *game, int dirX, int dirY)
+{
+	float playerX = game->map->player[0];
+	float playerY = game->map->player[1];
+	int next_x = (playerX + dirX * STEP_SIZE) / TILE_SIZE;
+	int next_y = (playerY + dirY * STEP_SIZE) / TILE_SIZE;
+
+	// Check if the calculated position is within bounds
+	if (next_x >= 0 && next_x < game->map->x && next_y >= 0 && next_y < game->map->y)
+	{
+		char tile = game->map->big_map[next_y][next_x];
+		if (is_door(tile))
+			toggle_door(game, next_x, next_y);
+	}
+}
