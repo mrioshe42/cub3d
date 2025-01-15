@@ -23,10 +23,12 @@ A 3D raycasting game written in C, inspired by the classic Wolfenstein 3D game e
 
 ## 🚀 Installation
 
-1. Clone the repository and compile the project using make:
+Clone the repository and compile the project using make:
+
 make
 
 ## 🎯 Usage
+
 Run the program with a map file:
 
 ./cub3D maps/map_name.cub
@@ -39,11 +41,11 @@ ESC to exit the game
 
 ## 🎨 Project Structure
 
-main/: Contains the core game logic and raycasting engine
-textures/: Game textures and sprites
-audio/: Sound effects and music files
-includes/: Header files
-minilibx-linux/: Graphics library
+- main/: Contains the core game logic and raycasting engine
+- textures/: Game textures and sprites
+- audio/: Sound effects and music files
+- includes/: Header files
+- minilibx-linux/: Graphics library
 
 ## 📝 Notes
 
