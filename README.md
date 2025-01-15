@@ -24,7 +24,7 @@ A 3D raycasting game written in C, inspired by the classic Wolfenstein 3D game e
 ## 🚀 Installation
 
 1. Clone the repository:
-```bash
+
 git clone https://github.com/mrioshe42/cub3d.git
 cd cub3d
 Compile the project using make:
